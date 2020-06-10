@@ -1,9 +1,9 @@
 package main
 
 import (
-	"bufio"
 	"container/heap"
 	"fmt"
+	"io"
 	"os"
 	"strconv"
 	"sync"
@@ -104,18 +104,16 @@ func readFromNBytes(name string, start int64, toRead int64, drain chan []int64, 
 	var read int64 = 0
 	var i, j int64
 	var startT int64 = time.Now().UnixNano()
-
+	var readchars int = 0
 	if err != nil {
 		return nil
 	}
 	if toRead > batch {
 		for i = 0; i+batch < toRead; i += batch {
-			read = i
-			start = start + i
-			reader := bufio.NewReader(file)
-			buffer, _ = reader.Peek(int(batch))
-
-			if err == nil {
+			read = read + batch
+			file.Seek(start+i, 0)
+			readchars, err = io.ReadAtLeast(file, buffer, int(batch))
+			if err == nil && readchars > 0 {
 				for j = 0; j < int64(batch); j++ {
 					sol[buffer[j]]++
 				}
@@ -125,33 +123,17 @@ func readFromNBytes(name string, start int64, toRead int64, drain chan []int64, 
 				}
 				return nil
 			}
-
-			if err != nil {
-				if loud {
-					fmt.Printf("Thread %d aborted !\n", thrInd)
-				}
-				return nil
-			}
 		}
 	}
-
 	if read < toRead {
-
 		var bufLen = int(toRead % batch)
-		file.Seek(start, 0)
-		reader := bufio.NewReader(file)
-		buffer, _ = reader.Peek(bufLen)
-		if err == nil {
+		file.Seek(start+read, 0)
+		readchars, err = io.ReadAtLeast(file, buffer, bufLen)
+		if err == nil && readchars > 0 {
 			for j = 0; j < int64(bufLen); j++ {
 				sol[buffer[j]]++
 			}
 		} else {
-			if loud {
-				fmt.Printf("Thread %d aborted !\n", thrInd)
-			}
-		}
-
-		if err != nil {
 			if loud {
 				fmt.Printf("Thread %d aborted !\n", thrInd)
 			}
