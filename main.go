@@ -89,7 +89,7 @@ const locked int64 = 1
 
 var procTime [maxThreads]int64
 
-var batchSize = [11]int64{512, 1024, 2048, 4096, 8192, 12288, 16384, 20480, 24576, 28672, 32768}
+var batchSize = [10]int64{512, 1024, 2048, 4096, 8192, 12288, 16384, 20480, 24576, 32768}
 
 var thrSyncers [maxThreads]sync.Mutex
 
@@ -225,10 +225,11 @@ func main() {
 		huffPuff = buildTree(frequencyMap)
 		printCodes(huffPuff, []byte{})
 	}
-
+	var sumMean int64 = 0
 	for i = 0; i < thr; i++ {
-		fmt.Printf("%d ", procTime[i])
+		sumMean = sumMean + procTime[i]
+		fmt.Printf("%d,", procTime[i])
 	}
-	fmt.Println(frequencyMap, " ")
+	fmt.Printf("%d;\n", sumMean/int64(thr))
 	os.Exit(0)
 }
