@@ -44,6 +44,7 @@ def get_names_of_files(name_wild, dir_thr):
 
 def generate_all_graphs(name,threads):
     final_info = []
+    threads_arr=range(1,threads+1)
     size_of_input_buffer = [512, 1024, 2048, 4096, 8192, 12288, 16384, 20480, 24576, 32768]
     colors = [   "#178b90",
                  "#2586a2",
@@ -81,10 +82,26 @@ def generate_all_graphs(name,threads):
         plt.plot(size_of_input_buffer,final_info[i], label ="Threads {}".format(i+1))
 
     plt.legend(loc="upper right", ncol=3)
-    plt.title("All threads plot")
+    plt.title("Input Time / Buffer size speed")
     plt.xlabel("Input_size")
     plt.ylabel("Time")
-    plt.savefig("All threads Fig",figsize=(1920,1080))
+    plt.savefig("Thread scaling",figsize=(1920,1080))
+    plt.close()
+
+    final_info = [[final_info[j][i] for j in range(len(final_info))] for i in range(len(final_info[0]))]
+
+    for i in range(len(size_of_input_buffer)):
+        plt.plot(threads_arr,final_info[i], label ="Size {}".format(size_of_input_buffer[i]))
+
+    plt.legend(loc="upper right", ncol=3)
+    plt.title("Threads/ readsize speed")
+    plt.xlabel("Threads")
+    plt.ylabel("Time")
+    plt.savefig("Read Buffer size efficincy",figsize=(1920,1080))
+    plt.close()
+
+
+
 
 sys.argv.pop(0)
 name = sys.argv[0]
