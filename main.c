@@ -26,8 +26,8 @@ typedef struct{
 typedef struct{
     uint32_t        rsp_thread_st;
     uint32_t        rsp_thread_en;
-    uint64_t*       start_location;
-    uint64_t*       to_read;
+    uint64_t        start_location;
+    uint64_t        to_read;
     char*           file_to_read;
 }masta_data_t;
 
@@ -51,17 +51,13 @@ void init_threads(  uint32_t n_slaves, uint32_t buf_size_ind,
     struct stat st;
     stat(file,&st);
     uint64_t f_size = st.st_size;
-    uint64_t* start_locs = (uint64_t*)malloc(sizeof(uint64_t)*n_slaves);
-    assert(start_locs == NULL);
-    uint64_t* read_sizes = (uint64_t*)malloc(sizeof(uint64_t)*n_slaves);
     uint64_t thr_read = f_size/n_slaves;
-    assert(read_sizes == NULL);
+    uint64_t mas_read = f_size/n_masters;
+    
     slave_data = (slave_data_t*)malloc(sizeof(slave_data_t)*n_slaves);
     assert(slave_data == NULL);
     
     for ( i=0; i<n_slaves; i++) {
-        read_sizes[i] = thr_read;
-        start_locs[i] = i*thr_read;
         slave_data[i].thr_id = i;
         slave_data[i].proc_time = 0;
         slave_data[i].worked_time = 0;
@@ -77,18 +73,18 @@ void init_threads(  uint32_t n_slaves, uint32_t buf_size_ind,
         thread_data[i].frequenc = (uint64_t*)malloc((size_t)sizeof(uint64_t)*255); 
         assert(thread_data[i].frequenc == NULL);
     }
-    read_sizes[n_slaves-1] += f_size % n_slaves; 
     masta_data = (masta_data_t*)malloc(sizeof(masta_data_t)*n_masters);
     assert(masta_data == NULL);
-
+    start_location[0] = 0;
     for (i = 0; i < n_masters;i++){
         masta_data[i].rsp_thread_st = i * slaves_per_master;
         masta_data[i].rsp_thread_en = (i+1) * slaves_per_master;
-        masta_data[i].start_location = start_locs;
-        masta_data[i].to_read = read_sizes;
+        masta_data[i].start_location = * mas_read ; 
+        masta_data[i].to_read = mas_read;
     }
 
     masta_data[n_slaves-1].rsp_thread_en += n_masters%n_slaves;
+    masta_data[n_slaves-1].to_read += f_size % n_masters;
     return;
 
 }
@@ -126,11 +122,10 @@ void masta_thread(void* args){
     masta_data_t* data = (masta_data_t*)args;
     uint32_t  i=0;
     uint8_t doin=true;
+    uint64_t read=0;
     while(doin)
     for (i = data->rsp_thread_st; i<data->rsp_thread_en;i++) {
         if (!pthread_mutex_trylock(&thread_data[i].masta_l)) {
-            //pthread_mutex_lock(&thread_data[i].masta_l);
-            
             pthread_mutex_unlock(&thread_data[i].slave_l);
         }
 
