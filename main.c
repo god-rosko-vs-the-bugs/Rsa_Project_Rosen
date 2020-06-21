@@ -1,3 +1,6 @@
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <pthread.h>
 #include <string.h>
@@ -9,7 +12,7 @@
 #include <sys/stat.h>
 //#include "huffman.h"
 
-#define max_threads 64
+#define MAX_THREADS 64
 
 
 uint64_t thr_buf_sizes[10]={512, 1024, 2048, 4096, 8192, 12288, 16384, 20480, 24576, 32768};
@@ -17,46 +20,26 @@ uint64_t thr_buf_sizes[10]={512, 1024, 2048, 4096, 8192, 12288, 16384, 20480, 24
 typedef struct{
     pthread_mutex_t masta_l;
     pthread_mutex_t slave_l;
-    uint32_t        max_buffer;
-    uint32_t        act_size;
-    uint8_t*        buffer;
+    uint16_t        signal_thr;
+    int64_t        max_buffer;
+    int64_t        act_size;
     uint64_t*       frequenc;
+    uint8_t*        buffer;
 }thread_buffer;
 
-typedef struct{
-    uint32_t        rsp_thread_st;
-    uint32_t        rsp_thread_en;
-    uint64_t        start_location;
-    uint64_t        to_read;
-    char*           file_to_read;
-}masta_data_t;
 
 typedef struct{
     uint32_t        thr_id;
     double          proc_time;
     double          worked_time;
 }slave_data_t ;
-
-thread_buffer   thread_data[max_threads];
+thread_buffer   thread_data[MAX_THREADS];
 uint32_t num_slaves = 0;
 uint32_t num_mastas = 0;
-slave_data_t*   slave_data = NULL;
-masta_data_t*   masta_data = NULL;
+slave_data_t   slave_data[MAX_THREADS];
 
-void init_threads(  uint32_t n_slaves, uint32_t buf_size_ind, 
-                    uint32_t n_masters,char* file){
+void init_threads(  uint32_t n_slaves, uint32_t buf_size_ind){
     int i;
-    uint32_t slaves_per_master = n_masters/n_slaves;
-    uint64_t* read_size_pthr = malloc(sizeof(uint64_t)*n_slaves);
-    struct stat st;
-    stat(file,&st);
-    uint64_t f_size = st.st_size;
-    uint64_t thr_read = f_size/n_slaves;
-    uint64_t mas_read = f_size/n_masters;
-    
-    slave_data = (slave_data_t*)malloc(sizeof(slave_data_t)*n_slaves);
-    assert(slave_data == NULL);
-    
     for ( i=0; i<n_slaves; i++) {
         slave_data[i].thr_id = i;
         slave_data[i].proc_time = 0;
@@ -68,28 +51,22 @@ void init_threads(  uint32_t n_slaves, uint32_t buf_size_ind,
         thread_data[i].act_size = 0;
 
         thread_data[i].buffer = (uint8_t*)malloc((size_t)thread_data[i].max_buffer) ;
-        assert(thread_data[i].buffer == NULL);
 
         thread_data[i].frequenc = (uint64_t*)malloc((size_t)sizeof(uint64_t)*255); 
-        assert(thread_data[i].frequenc == NULL);
     }
-    masta_data = (masta_data_t*)malloc(sizeof(masta_data_t)*n_masters);
-    assert(masta_data == NULL);
-    start_location[0] = 0;
-    for (i = 0; i < n_masters;i++){
-        masta_data[i].rsp_thread_st = i * slaves_per_master;
-        masta_data[i].rsp_thread_en = (i+1) * slaves_per_master;
-        masta_data[i].start_location = * mas_read ; 
-        masta_data[i].to_read = mas_read;
-    }
-
-    masta_data[n_slaves-1].rsp_thread_en += n_masters%n_slaves;
-    masta_data[n_slaves-1].to_read += f_size % n_masters;
     return;
-
 }
 
-void reader_thread(void* args){
+void deinit_threads(  uint32_t n_slaves, uint32_t buf_size_ind){
+    int i;
+    for ( i=0; i<n_slaves; i++) {
+        free( thread_data[i].buffer );
+        free(thread_data[i].frequenc);
+    }
+    return;
+}
+
+void*  reader_thread(void* args){
     slave_data_t* data = (slave_data_t*)args;
     time_t work_time = {0};
     data->worked_time = 0;
@@ -98,44 +75,94 @@ void reader_thread(void* args){
     time_t start_time = clock();
     int32_t i;
     uint8_t chr;
-    uint8_t doin = 1;
-    while (doin){
+    uint8_t sthr_doin = 1; 
+    while (sthr_doin){
         pthread_mutex_lock(&thread_data[data->thr_id].slave_l);
+        sthr_doin = 0;
         crnt_time = clock();
         for(i=0;i<thread_data[data->thr_id].act_size;i++){
+            sthr_doin = 1;
             chr = thread_data[data->thr_id].buffer[i];
             thread_data[data->thr_id].frequenc[chr]+=1;
         }
-
         data->worked_time += (double)((clock()-crnt_time)/CLOCKS_PER_SEC);
-        if (thread_data[data->thr_id].act_size != thread_data[data->thr_id].max_buffer){
-            doin = 0;
-        }
         pthread_mutex_unlock(&thread_data[data->thr_id].masta_l);
     }
+    printf("thread finished: %d \n",data[i].thr_id); 
     data->proc_time = (double)((clock()-start_time)/CLOCKS_PER_SEC);
-    return;
+    return NULL;
 }
-
-// @masta_thread takes masta_data_t* cast ot void pointer as arg
-void masta_thread(void* args){
-    masta_data_t* data = (masta_data_t*)args;
-    uint32_t  i=0;
-    uint8_t doin=true;
-    uint64_t read=0;
-    while(doin)
-    for (i = data->rsp_thread_st; i<data->rsp_thread_en;i++) {
-        if (!pthread_mutex_trylock(&thread_data[i].masta_l)) {
-            pthread_mutex_unlock(&thread_data[i].slave_l);
-        }
-
-    }
-    return;
-}
-
 
 int main(int argc,char* argv[]){
-    // TODO add args parsing call init and start threads properly, recall slave threads
-    // first then recall master threads 
+    char filename[128]="./test.txt";
+    int threads = 1;
+    int i = 0;
+    int buf = 0;
+    int fd = open(filename,O_RDONLY);
+    int64_t read_size;
+    int8_t reading = 1;
+    uint8_t set_once = 1;
+    uint8_t quietMode = 1;
+    uint8_t printTree = 0;
+    void* result;
+    uint64_t main_freq_table[256]={0};
+    for (i = 0; i < argc; i++) {
+        if (!strcmp(argv[i],"-f") || !strcmp(argv[i], "-file" )){
+            strcpy(filename , argv[i+1]);
+            i++;
+        } else if (!strcmp( argv[i],"-q") || !strcmp(argv[i],"-quiet")) {
+            quietMode = 0; 
+            } else if (!strcmp (argv[i], "-t") || !strcmp(argv[i],  "-threads") 
+                    || !strcmp( argv[i], "-tasks")) {
+            threads = atoi(argv[i+1]);
+            i++;
+        } else if (!strcmp( argv[i],"-m") || !strcmp(argv[i],"-meth")) {
+            buf = atoi(argv[i+1]);
+            i++;
+        } else if (!strcmp(argv[i] , "-ptree")) {
+            printTree = 1;
+        }
+    }
+    pthread_t pool[MAX_THREADS];
+    init_threads(threads, buf );
+    for(i = 0;i<threads;i++) {
+        pthread_mutex_lock(&thread_data[i].slave_l);
+        pthread_create(&pool[i],NULL,reader_thread,&slave_data[i]);
+    }
+    while (reading){
+endloop:
+        for (i = 0;i<threads;i++){
+            pthread_mutex_lock(&thread_data[i].masta_l);
+            if (reading) {
+                read_size = read(fd,thread_data[i].buffer,thr_buf_sizes[buf]);
+                thread_data[i].act_size = read_size;
+                if (read_size < thr_buf_sizes[buf]){
+                   reading = 0;
+                   pthread_mutex_unlock(&thread_data[i].slave_l);
+                   goto endloop;
+                }
+            } else {
+                thread_data[i].act_size = 0;
+            }
+            pthread_mutex_unlock(&thread_data[i].slave_l);
+        }
+    }
+    for(i = 0;i<threads;i++) {
+        pthread_join(pool[i],NULL);
+    }
+
+    int j=0;
+    for (i =0;i<threads;i++){
+        for (j=0;j<255;j++) {
+            main_freq_table[j]+= thread_data[i].frequenc[j];
+        }
+    }
+    for (j=0;j<255;j++) {
+        if (main_freq_table[j]){
+            printf("%c - %lu \n",(char)j,main_freq_table[j]);
+        }
+    }
+    deinit_threads(threads, buf );
     return 0;
+
 }
