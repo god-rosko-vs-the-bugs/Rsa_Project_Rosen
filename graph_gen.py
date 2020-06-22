@@ -10,14 +10,13 @@ def read_csv(name):
     with open(name, newline='') as f:
         reader = csv.reader(f)
         data = list(reader)
-        data.pop(0)
-    for i in range(len(data)):
-        mean_time.append(int(data[i][len(data[i])-1].strip(';')))
+    mean_time.append(int(data[i][len(data[i])-1].strip(';')))
+    print(np.mean(mean_time))
     return np.mean(mean_time)
 
 
 def gen_graph(listo,n_thr):
-    size_of_input_buffer = [512, 1024, 2048, 4096, 8192, 12288, 16384, 20480, 24576, 32768]
+    size_of_input_buffer = [64,512, 1024, 2048, 4096, 8192, 12288, 16384, 20480 , 32768]
     tmp_list = []
     listo.sort()
     for i in range(len(listo)):
@@ -45,7 +44,7 @@ def get_names_of_files(name_wild, dir_thr):
 def generate_all_graphs(name,threads):
     final_info = []
     threads_arr=range(1,threads+1)
-    size_of_input_buffer = [512, 1024, 2048, 4096, 8192, 12288, 16384, 20480, 24576, 32768]
+    size_of_input_buffer = [64,512, 1024, 2048, 4096, 8192, 12288, 16384, 20480, 32768]
     colors = [   "#178b90",
                  "#2586a2",
                  "#29d5cb",
