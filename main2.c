@@ -14,11 +14,10 @@
 
 #define MAX_THREADS 64
 
-
-uint64_t thr_buf_sizes[10]={64,512, 1024, 2048, 4096, 8192, 12288, 16384, 20480 , 32768};
+uint64_t thr_buf_sizes[10]={512, 1024, 2048, 4096, 8192, 12288, 16384, 20480 , 32768,65572};
 
 uint8_t quietMode = 1;
-uint8_t* global_buffer = NULL ;
+uint8_t global_buffer[MAX_THREADS*65600] ;
 int64_t abs_max_buffer = 0;
 int64_t abs_act_max_buffer = 0;
 int32_t buf;
@@ -27,7 +26,7 @@ typedef struct{
     pthread_mutex_t slave_l;
     int64_t        max_buffer;
     int64_t        act_size;
-    uint64_t*       frequenc;
+    uint64_t       frequenc[256];
 }thread_buffer;
 
 
@@ -36,19 +35,16 @@ typedef struct{
     double          proc_time;
     double          worked_time;
 }slave_data_t ;
-thread_buffer   thread_data[MAX_THREADS];
+thread_buffer   thread_data[MAX_THREADS]={0};
 uint32_t num_slaves = 0;
 uint32_t num_mastas = 0;
 slave_data_t   slave_data[MAX_THREADS];
 
 void init_threads(  uint32_t n_slaves, uint32_t buf_size_ind){
     int i;
-    
-    global_buffer = (uint8_t*) malloc((size_t)thr_buf_sizes[buf_size_ind]*n_slaves);
-    if (global_buffer == NULL)
-        printf("couldd not alloc\n");
+
     abs_max_buffer = thr_buf_sizes[buf_size_ind]*n_slaves;
-    
+
     printf("bufsize %ld\n",abs_max_buffer );
     for ( i=0; i<n_slaves; i++) {
         slave_data[i].thr_id = i;
@@ -57,19 +53,11 @@ void init_threads(  uint32_t n_slaves, uint32_t buf_size_ind){
 
         pthread_mutex_init(&thread_data[i].masta_l,NULL);
         pthread_mutex_init(&thread_data[i].slave_l,NULL);
-        thread_data[i].frequenc = (uint64_t*)malloc((size_t)sizeof(uint64_t)*255);
     }
     return;
 }
 
-void deinit_threads(  uint32_t n_slaves, uint32_t buf_size_ind){
-    int i;
-    free(global_buffer);
-    for ( i=0; i<n_slaves; i++) {
-        free(thread_data[i].frequenc);
-    }
-    return;
-}
+
 
 void*  reader_thread(void* args){
     slave_data_t* data = (slave_data_t*)args;
@@ -157,7 +145,6 @@ int main(int argc,char* argv[]){
         }
 
         abs_act_max_buffer = read(fd,global_buffer,abs_max_buffer);
-//        printf("to read :%ld read:%ld\n",abs_max_buffer,abs_act_max_buffer);
         if (abs_act_max_buffer < abs_max_buffer ) reading = 0;
         for (i = 0;i<threads;i++){
             pthread_mutex_unlock(&thread_data[i].slave_l);

@@ -15,7 +15,7 @@
 #define MAX_THREADS 64
 
 
-uint64_t thr_buf_sizes[10]={64,512, 1024, 2048, 4096, 8192, 12288, 16384, 20480 , 32768};
+uint64_t thr_buf_sizes[10]={512, 1024, 2048, 4096, 8192, 12288, 16384, 20480 , 32768,65572};
 
 uint8_t quietMode = 1;
 typedef struct{
@@ -24,8 +24,8 @@ typedef struct{
     uint16_t        signal_thr;
     int64_t        max_buffer;
     int64_t        act_size;
-    uint64_t*       frequenc;
-    uint8_t*        buffer;
+    uint64_t       frequenc[256];
+    uint8_t        buffer[65600];
 }thread_buffer;
 
 
@@ -34,7 +34,7 @@ typedef struct{
     double          proc_time;
     double          worked_time;
 }slave_data_t ;
-thread_buffer   thread_data[MAX_THREADS];
+thread_buffer   thread_data[MAX_THREADS]={0};
 uint32_t num_slaves = 0;
 uint32_t num_mastas = 0;
 slave_data_t   slave_data[MAX_THREADS];
@@ -50,10 +50,6 @@ void init_threads(  uint32_t n_slaves, uint32_t buf_size_ind){
         pthread_mutex_init(&thread_data[i].slave_l,NULL);
         thread_data[i].max_buffer = thr_buf_sizes[buf_size_ind];
         thread_data[i].act_size = 0;
-
-        thread_data[i].buffer = (uint8_t*)malloc((size_t)thread_data[i].max_buffer) ;
-
-        thread_data[i].frequenc = (uint64_t*)malloc((size_t)sizeof(uint64_t)*255);
     }
     return;
 }
@@ -181,7 +177,7 @@ endloop:
     }
     mean_proc_time = mean_thr_time(threads);
     printf("%.2lf;\n",mean_proc_time);
-    deinit_threads(threads, buf );
+    //deinit_threads(threads, buf );
     return 0;
 
 }
