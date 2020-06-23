@@ -1,5 +1,5 @@
 
-[ ! -d "./res" ] && mkdir "./res"
+[ ! -d "./res3" ] && mkdir "./res"
 
 file=$1
 d=0

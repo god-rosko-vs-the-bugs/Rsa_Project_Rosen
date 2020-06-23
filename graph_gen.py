@@ -10,13 +10,11 @@ def read_csv(name):
     with open(name, newline='') as f:
         reader = csv.reader(f)
         data = list(reader)
-    mean_time.append(int(data[i][len(data[i])-1].strip(';')))
-    print(np.mean(mean_time))
-    return np.mean(mean_time)
-
+    stringo=str(data[len(data)-1][0])
+    return float(stringo.strip(";") )
 
 def gen_graph(listo,n_thr):
-    size_of_input_buffer = [64,512, 1024, 2048, 4096, 8192, 12288, 16384, 20480 , 32768]
+    size_of_input_buffer = [512, 1024, 2048, 4096, 8192, 12288, 16384, 20480 , 32768,65536]
     tmp_list = []
     listo.sort()
     for i in range(len(listo)):
@@ -33,7 +31,7 @@ def gen_graph(listo,n_thr):
 
 
 def get_names_of_files(name_wild, dir_thr):
-    path = './res/'+ str(dir_thr) + '/'
+    path = './res4/'+ str(dir_thr) + '/'
     files = []
     for r, d, f in os.walk(path):
         for file in f:
@@ -44,7 +42,7 @@ def get_names_of_files(name_wild, dir_thr):
 def generate_all_graphs(name,threads):
     final_info = []
     threads_arr=range(1,threads+1)
-    size_of_input_buffer = [64,512, 1024, 2048, 4096, 8192, 12288, 16384, 20480, 32768]
+    size_of_input_buffer = [ 512, 1024, 2048, 4096, 8192, 12288, 16384, 20480 , 32768,65536]
     colors = [   "#178b90",
                  "#2586a2",
                  "#29d5cb",
@@ -102,14 +100,14 @@ def generate_all_graphs(name,threads):
 
 
 
-sys.argv.pop(0)
-name = sys.argv[0]
-threads = int(sys.argv[1])
-if threads == 0 :
-   threads = 16
-if name == "":
-    name = "lorem"
-threads=16
-name="lorem"
+##sys.argv.pop(0)
+##name = sys.argv[0]
+##threads = int(sys.argv[1])
+##if threads == 0 :
+##   threads = 16
+##if name == "":
+##    name = "lorem4"
+threads=32
+name="lorem4"
 generate_all_graphs(name, threads)
 
