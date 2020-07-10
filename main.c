@@ -82,11 +82,12 @@ void*  reader_thread(void* args){
             chr = thread_data[data->thr_id].buffer[i];
             thread_data[data->thr_id].frequenc[chr]+=1;
         }
-        data->worked_time += (double)((clock()-crnt_time)/CLOCKS_PER_SEC);
+        data->worked_time += (double)(clock()-crnt_time);
         pthread_mutex_unlock(&thread_data[data->thr_id].masta_l);
     }
     if(quietMode) printf("thread finished: %d \n",data->thr_id);
-    data->proc_time = (double)((clock()-start_time)/CLOCKS_PER_SEC);
+    data->proc_time = (double)(clock()-start_time/CLOCKS_PER_SEC);
+    data->worked_time= (double)(data->worked_time/CLOCKS_PER_SEC);
     if(quietMode) printf("%lf \n",data->proc_time);
     return NULL;
 }
@@ -98,7 +99,14 @@ double mean_thr_time(int threads){
     }
     return  result/threads;
 }
-
+double mean_work(int threads){
+    int p;
+    double result = 0;
+    for (p = 0;p < threads;p++){
+        result += slave_data[p].worked_time;
+    }
+    return  result/threads;
+}
 int main(int argc,char* argv[]){
     double mean_proc_time;
     double mean_work_time;
@@ -176,7 +184,8 @@ endloop:
         }
     }
     mean_proc_time = mean_thr_time(threads);
-    printf("%.2lf;\n",mean_proc_time);
+    mean_work_time = mean_work(threads);
+    printf("%.2lf,%.2lf;\n",mean_proc_time,mean_work_time);
     //deinit_threads(threads, buf );
     return 0;
 

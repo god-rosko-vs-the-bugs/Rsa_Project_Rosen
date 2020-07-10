@@ -72,22 +72,26 @@ void*  reader_thread(void* args){
     int64_t upper,lower;
     while (sthr_doin){
         pthread_mutex_lock(&thread_data[data->thr_id].slave_l);
+        crnt_time = clock();
         if (abs_act_max_buffer != abs_max_buffer) sthr_doin = 0;
         upper = (data->thr_id+1) * thr_buf_sizes[buf];
         lower = data->thr_id * thr_buf_sizes[buf];
-        if (lower > abs_act_max_buffer) 
+        if (lower > abs_act_max_buffer)
             goto end;
         if (upper >= abs_act_max_buffer)
             upper = abs_act_max_buffer;
         for(i=lower;i<upper;i++){
-            chr = global_buffer[i]; 
+            chr = global_buffer[i];
             thread_data[data->thr_id].frequenc[chr]+=1;
         }
+
 end:
+        data->worked_time = (double)(crnt_time - clock());
         pthread_mutex_unlock(&thread_data[data->thr_id].masta_l);
     }
     if(quietMode) printf("thread finished: %d \n",data->thr_id);
     data->proc_time = (double)((clock()-start_time)/CLOCKS_PER_SEC);
+    data->worked_time= (double)((data->worked_time)/CLOCKS_PER_SEC);
     if(quietMode) printf("%lf \n",data->proc_time);
     return NULL;
 }
@@ -99,7 +103,14 @@ double mean_thr_time(int threads){
     }
     return  result/threads;
 }
-
+double mean_work(int threads){
+    int p;
+    double result = 0;
+    for (p = 0;p < threads;p++){
+        result += slave_data[p].worked_time;
+    }
+    return  result/threads;
+}
 int main(int argc,char* argv[]){
     double mean_proc_time;
     double mean_work_time;
@@ -139,7 +150,7 @@ int main(int argc,char* argv[]){
         pthread_create(&pool[i],NULL,reader_thread,&slave_data[i]);
     }
 
-    while (reading) { 
+    while (reading) {
         for (i = 0;i<threads;i++){
             pthread_mutex_lock(&thread_data[i].masta_l);
         }
@@ -171,6 +182,7 @@ int main(int argc,char* argv[]){
         }
     }
     mean_proc_time = mean_thr_time(threads);
-    printf("%.2lf;\n",mean_proc_time);
+    mean_work_time = mean_work(threads);
+    printf("%.2lf,%.2lf;\n",mean_proc_time,mean_work_time);
     return 0;
 }
