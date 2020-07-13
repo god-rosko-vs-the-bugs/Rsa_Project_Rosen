@@ -97,7 +97,7 @@ double mean_thr_time(int threads){
     for (p = 0;p < threads;p++){
         result += slave_data[p].proc_time;
     }
-    return  result/threads;
+    return  (result/threads)/CLOCKS_PER_SEC;
 }
 double mean_work(int threads){
     int p;
@@ -185,7 +185,7 @@ endloop:
     }
     mean_proc_time = mean_thr_time(threads);
     mean_work_time = mean_work(threads);
-    printf("%.2lf,%.2lf;\n",mean_proc_time,mean_work_time);
+    printf("%.2lf,%.2lf,%.2lf;\n",mean_proc_time,mean_work_time,mean_work_time/mean_proc_time);
     //deinit_threads(threads, buf );
     return 0;
 

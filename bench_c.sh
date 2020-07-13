@@ -1,5 +1,5 @@
 #!/bin/bash
-[ ! -d "./res3" ] && mkdir "./res3"
+[ ! -d "./res5" ] && mkdir "./res5"
 
 gcc -o ./main ./main.c -lpthread
 chmod +x ./main
@@ -7,7 +7,7 @@ echo pass init
 file=$1
 d=0
     for thr in {1..32};do 
-        [ ! -d "./res3/$thr" ] && mkdir "./res3/$thr"
+        [ ! -d "./res5/$thr" ] && mkdir "./res5/$thr"
         for batch in {0..9};do
             res_file=$(echo res3/$thr/bench-results-$file-$batch.csv)
             echo "" > $res_file
